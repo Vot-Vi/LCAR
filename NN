@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
+
 typedef struct {
     int batch_size;
     float *z;
@@ -64,14 +65,15 @@ int NN_Layer_innit(NeuralNetwork* neuralnet, int layer_indx, int input_size,int 
 	Layer->bias    = (float*)malloc(output_size*sizeof(float));
 	Layer->grad_weights = (float*)malloc(input_size*output_size*sizeof(float));
 	Layer->grad_bias    = (float*)malloc(output_size*sizeof(float));
+	Layer->cache.z = (float*)malloc(output_size*sizeof(float));
 	Layer->cache.grad = (float*)malloc(output_size*sizeof(float));
 	for (int i = 0; i < output_size; i++){
 		for (int j = 0; j < input_size; j++){
-			Layer->weights[i*input_size+j] = (float)drand48(); //random entre (0,1)
+			Layer->weights[i*input_size+j] = (float)drand48()-0.5; //random entre (0,1)
 		}
 		Layer->bias[i] = 0.0f;
 	}
-	neuralnet->layers[layer_indx].initialized=1;
+	neuralnet->layers[layer_indx].initialized = 1;
 	return 0;
 }
 void  NN_print_layer(NeuralNetwork* neuralnet,int layer_indx){
@@ -110,6 +112,7 @@ int NN_loop(NeuralNetwork* neuralnet,int epochs,float *X,float *Y,int n_examples
 		}
 	}
 	for (int ep = 0; ep < epochs; ep++){
+		float loss_avg= 0;
 		//FORWARD
 		for (int ex=0; ex < n_examples; ex++){
 			float* grad = grad_buffer;
@@ -120,11 +123,18 @@ int NN_loop(NeuralNetwork* neuralnet,int epochs,float *X,float *Y,int n_examples
 				int input_size = neuralnet->layers[layer_indx].input_size;
 				int output_size = neuralnet->layers[layer_indx].output_size;
 				for (int i = 0; i < output_size; i++){
+					float grad_z = grad[i];
+					grad_z *= (neuralnet->layers[layer_indx].cache.z[i]);
+					neuralnet->layers[layer_indx].grad_bias.........
 					neuralnet->layers[layer_indx].output[i]=0;
 					for (int j = 0; j < input_size; j++){
 						neuralnet->layers[layer_indx].output[i]+=	neuralnet->layers[layer_indx].weights[i*input_size+j] * neuralnet->layers[layer_indx].input[j];
 					}
 					neuralnet->layers[layer_indx].output[i]+=neuralnet->layers[layer_indx].bias[i];
+					neuralnet->layers[layer_indx].cache.z[i]+=neuralnet->layers[layer_indx].output[i];
+
+					
+					
 				}
 			}
 			//BACKWARD
@@ -132,6 +142,7 @@ int NN_loop(NeuralNetwork* neuralnet,int epochs,float *X,float *Y,int n_examples
 				loss[i] = 0.5*(neuralnet->layers[num_layers-1].output[i] - y[i])*(neuralnet->layers[num_layers-1].output[i] - y[i]);
 				grad[i] = (neuralnet->layers[num_layers-1].output[i] - y[i]);
 				//printf("La red da %f y la respuesta es %f loss = %f\n",neuralnet->layers[num_layers-1].output[i],y[i],loss[i]);
+				loss_avg+=(loss[i]/final_size)/n_examples;
 			}
 			for (int layer_indx =num_layers-1;layer_indx >= 0;layer_indx--){
 				int input_size = neuralnet->layers[layer_indx].input_size;
@@ -156,11 +167,30 @@ int NN_loop(NeuralNetwork* neuralnet,int epochs,float *X,float *Y,int n_examples
 					grad = neuralnet->layers[layer_indx-1].cache.grad;
 				}
 			}
+			for(int layer_indx=0;layer_indx<num_indx;layer_indx++){
+				int output_size = neuralnet->layers[layer_indx].output_size;
+				int input_size = neuralnet->layers[layer_indx].input_size;
+				for(int i=0;i<output_size;i++){
+					neuralnet->layers[layer_indx].bias[i]-=learning_rate*neuralnet->layers[layer_indx].grad_bias[i];
+					for(int j=0;j<input_size;j++){
+						neuralnet->layers[layer_indx].weights[i*input_size+j]-=learning_rate*neuralnet->layers[layer_indx].grad_weights[i*input_size+j];
+					}
+				}
+			}
 		}
 	}	
-
 	return 0;
 }
+
+
+def relu(x){
+	if(x>0){
+		return x
+	}else{
+		return 0
+	}
+}
+
 int main(){
 	NeuralNetwork* neuralnet = (NeuralNetwork*)malloc(sizeof(NeuralNetwork));
 	NN_init(neuralnet,3);
@@ -170,10 +200,12 @@ int main(){
 	float *X = (float*)malloc(input_size*n_examples*sizeof(float));
 	for (int i = 0; i < n_examples; i++) X[i]=drand48();
 	float *Y = (float*)malloc(out_size*n_examples*sizeof(float));
-	for (int i = 0; i < n_examples; i++) Y[i]=2*X[i]+1;
+	for (int i = 0; i < n_examples; i++) Y[i]=2*X[i]*X[i]+1;
 	NN_Layer_innit(neuralnet,0,input_size,8);
 	NN_Layer_innit(neuralnet,1,8,8);
-	NN_Layer_innit(neuralnet,2,8,out_size);
+	NN_Layer_innit(neuralnet,2,8,8);
+	NN_Layer_innit(neuralnet,3,8,8);
+	NN_Layer_innit(neuralnet,4,8,out_size);
 	//NN_print_layer(neuralnet,0);
 	//NN_print_layer(neuralnet,1);
 	double start = omp_get_wtime();
@@ -182,3 +214,5 @@ int main(){
 	printf("Esto tardo %lf\n",end-start);
 	return 0;
 }
+
+//Implementar funcion relu elegible, batch size y gradiente estocastico(por batch forward, backard, promedio y depsues update). Openmp.
