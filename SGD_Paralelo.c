@@ -59,8 +59,7 @@ float Sigmoide(float x){
 }
 
 float Sigmoide_derivative(float x){
-    float s = Sigmoide(x);
-    return s*(1.0f-s);
+    return 1/(expf(x) + expf(-x) + 2);
 }
 //Fin Sigmoide
 
@@ -70,8 +69,7 @@ float Tanh(float x){
 }
 
 float Tanh_derivative(float x){
-    float t = tanhf(x);
-    return 1.0f-t*t;
+    return 4/(expf(x) + expf(-x) + 2);
 }
 //Fin Tanh
 
