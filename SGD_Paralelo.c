@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -233,7 +232,10 @@ int NN_loop(NeuralNetwork *neuralnet, int epochs, float *X, float *Y, int n_exam
     else                       { act = Tanh;     dact = Tanh_derivative;     }
 
     /* Buffers privados por hilo, reservados una sola vez */
-    int nthreads = omp_get_max_threads();
+    int nthreads;
+    printf("Maximos threads: %d",omp_get_max_threads());
+    printf("Ingresar cantidad de threads: \n");
+    scanf("%d",&nthreads);
     ThreadBuf *tbufs = alloc_thread_bufs(neuralnet, nthreads);
 
     /*
@@ -411,7 +413,9 @@ int main(){
     int input_size = 1;
     int n_examples = pow(2,20);
     int n_epochs = 100;
-    int batch_size = 512;
+    int batch_size;
+    printf("Ingresar tamaño bath size: \n");
+    scanf("%d",&batch_size);
     float learning_rate = 0.01;
     int out_size = 1;
     float *X = (float*)malloc(input_size*n_examples*sizeof(float));
@@ -432,4 +436,4 @@ int main(){
     double end = omp_get_wtime();
     printf("Esto tardo %lf\n",end-start);
     return 0;
-}   
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
